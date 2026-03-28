@@ -1,44 +1,126 @@
 {
-  "skills": [
-    {
-      "name": "smart-web-fetch",
-      "description": "智能网页抓取工具 - 四级降级策略 (Jina → markdown.new → defuddle → Scrapling)，支持微信公众号等反爬页面，输出干净 Markdown，节省 50-80% Token",
-      "command": "/Users/kim/.claude/skills/smart-web-fetch/smart-web-fetch",
-      "triggers": [
-        "抓取网页",
-        "获取网页内容",
-        "web fetch",
-        "fetch url",
-        "获取 URL 内容",
-        "读取网页",
-        "网页转 markdown",
-        "微信公众号",
-        "反爬页面"
-      ],
+  "name": "smart-web-fetch",
+  "version": "2.0.0",
+  "description": "智能网页抓取技能 - 替代内置 web_fetch，自动使用 Jina Reader / markdown.new / defuddle.md 清洗服务获取干净 Markdown。支持多级降级策略，大幅降低 Token 消耗。当 Agent 需要获取网页内容时使用本技能替代 web_fetch。",
+  "author": "smart-web-fetch",
+  "license": "MIT",
+  "platforms": ["windows", "macos", "linux"],
+  "requirements": {
+    "dependencies": {
+      "python": ">=3.8",
+      "curl": "optional"
+    },
+    "python_packages": [
+      "scrapling",
+      "html2text",
+      "curl_cffi",
+      "browserforge"
+    ]
+  },
+  "commands": {
+    "windows": {
+      "executable": "powershell",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${SKILL_DIR}/smart-web-fetch.ps1"],
       "examples": [
         {
-          "request": "抓取 https://example.com 的内容",
-          "command": "smart-web-fetch https://example.com"
+          "description": "抓取网页内容",
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -File smart-web-fetch.ps1 https://example.com"
         },
         {
-          "request": "用 Jina Reader 获取 https://github.com/user/repo 的 README",
-          "command": "smart-web-fetch https://github.com/user/repo -s jina"
+          "description": "输出 JSON 格式",
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -File smart-web-fetch.ps1 -Url https://example.com -Json"
         },
         {
-          "request": "获取微信公众号文章并输出 JSON",
-          "command": "smart-web-fetch https://mp.weixin.qq.com/s/xxx --json"
+          "description": "指定服务抓取",
+          "command": "powershell -NoProfile -ExecutionPolicy Bypass -File smart-web-fetch.ps1 -Url https://example.com -Service jina"
+        }
+      ]
+    },
+    "unix": {
+      "executable": "bash",
+      "args": ["${SKILL_DIR}/smart-web-fetch"],
+      "examples": [
+        {
+          "description": "抓取网页内容",
+          "command": "./smart-web-fetch https://example.com"
+        },
+        {
+          "description": "输出 JSON 格式",
+          "command": "./smart-web-fetch https://example.com --json"
         }
       ]
     }
+  },
+  "services": {
+    "jina": {
+      "name": "Jina Reader",
+      "url": "https://r.jina.ai/",
+      "description": "最稳定的清洗服务，速度快，支持大多数网页",
+      "priority": 1
+    },
+    "markdown": {
+      "name": "markdown.new",
+      "url": "https://markdown.new/",
+      "description": "备用清洗服务",
+      "priority": 2
+    },
+    "defuddle": {
+      "name": "defuddle.md",
+      "url": "https://defuddle.md/",
+      "description": "备用清洗服务",
+      "priority": 3
+    },
+    "scrapling": {
+      "name": "Scrapling",
+      "description": "Python 库，处理反爬页面（如微信公众号）",
+      "priority": 4
+    }
+  },
+  "fallback_strategy": {
+    "description": "四级降级策略",
+    "order": ["jina", "markdown", "defuddle", "scrapling", "basic"],
+    "auto_detect_blocked": true
+  },
+  "usage": {
+    "when_to_use": [
+      "当需要获取网页内容时，替代内置的 web_fetch 工具",
+      "当需要将网页转换为 Markdown 格式时",
+      "当需要抓取反爬页面（如微信公众号）时",
+      "当需要节省 Token 消耗时"
+    ],
+    "benefits": [
+      "自动降级策略，提高成功率",
+      "干净的 Markdown 输出，节省 50-80% Token",
+      "支持反爬页面抓取",
+      "JSON 格式输出，便于程序处理"
+    ]
+  },
+  "triggers": [
+    "抓取网页",
+    "获取网页内容",
+    "web fetch",
+    "fetch url",
+    "获取 URL 内容",
+    "读取网页",
+    "网页转 markdown",
+    "微信公众号",
+    "反爬页面"
   ],
-  "hooks": {
-    "user-prompt-submit": {
-      "commands": [
-        {
-          "command": "if echo '{{INPUT}}' | grep -qE '(抓取 | 获取|fetch).*https?://'; then URL=$(echo '{{INPUT}}' | grep -oE 'https?://[^ ]+' | head -1); echo '检测到网页抓取请求，建议使用：smart-web-fetch \"$URL\"'; fi",
-          "description": "Detect web fetch requests and suggest smart-web-fetch"
-        }
-      ]
+  "examples": [
+    {
+      "user_request": "抓取 https://example.com 的内容",
+      "agent_action": "使用 smart-web-fetch 抓取网页内容",
+      "command": "smart-web-fetch https://example.com"
+    },
+    {
+      "user_request": "用 Jina Reader 获取 https://github.com/user/repo 的 README",
+      "agent_action": "使用 smart-web-fetch 指定 jina 服务",
+      "command": "smart-web-fetch https://github.com/user/repo -s jina"
+    },
+    {
+      "user_request": "获取微信公众号文章并输出 JSON",
+      "agent_action": "使用 smart-web-fetch 抓取并输出 JSON",
+      "command": "smart-web-fetch https://mp.weixin.qq.com/s/xxx --json"
     }
-  }
+  ]
 }

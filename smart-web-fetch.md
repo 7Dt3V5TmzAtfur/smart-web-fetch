@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Smart Web Fetch Pro - 智能网页抓取工具 (Unix/Linux/macOS 版本)
+# Smart Web Fetch Pro - 智能网页抓取工具 (增强版)
 # 替代内置 web_fetch，自动使用多种清洗服务获取干净 Markdown
 # 支持多级降级策略，大幅降低 Token 消耗
 # 四级降级：Jina Reader → markdown.new → defuddle.md → Scrapling (反爬)
@@ -20,14 +20,14 @@ TIMEOUT=30
 MAX_RETRIES=2
 
 # 清洗服务（按优先级排序）
-JINA_READER="https://r.jina.ai/"
-MARKDOWN_NEW="https://markdown.new/"
-DEFUDDLE_MD="https://defuddle.md/"
+JINA_READER="https://r.jina.ai/http"
+MARKDOWN_NEW="https://markdown.new"
+DEFUDDLE_MD="https://defuddle.md"
 
 # 打印帮助信息
 show_help() {
     cat << EOF
-Smart Web Fetch Pro - 智能网页抓取工具 (Unix 版本)
+Smart Web Fetch Pro - 智能网页抓取工具 (增强版)
 
 用法:
     smart-web-fetch <URL> [选项]
@@ -83,7 +83,7 @@ is_blocked_content() {
     local content_lower=$(echo "$content" | tr '[:upper:]' '[:lower:]')
 
     # 检测反爬关键词
-    if echo "$content_lower" | grep -qiE '(环境异常|验证|captcha|access denied|blocked|forbidden|403 forbidden|cloudflare)'; then
+    if echo "$content_lower" | grep -qiE '(环境异常 | 验证|captcha|access denied|blocked|forbidden|403 forbidden|cloudflare)'; then
         return 0
     fi
     return 1
@@ -94,7 +94,8 @@ fetch_jina() {
     local url="$1"
     log_info "尝试使用 Jina Reader 获取内容..."
 
-    local jina_url="${JINA_READER}${url}"
+    # Jina Reader 直接使用 URL 作为参数
+    local jina_url="https://r.jina.ai/${url}"
 
     local response
     if ! response=$(curl -sL --max-time "$TIMEOUT" \
@@ -130,7 +131,7 @@ fetch_markdown_new() {
     if ! response=$(curl -sL --max-time "$TIMEOUT" \
         -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
         -H "Accept: text/html,application/xhtml+xml" \
-        "${MARKDOWN_NEW}${url}" 2>&1); then
+        "${MARKDOWN_NEW}/${url}" 2>&1); then
         log_warn "markdown.new 请求失败"
         return 1
     fi
@@ -160,7 +161,7 @@ fetch_defuddle() {
     if ! response=$(curl -sL --max-time "$TIMEOUT" \
         -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
         -H "Accept: text/html,application/xhtml+xml" \
-        "${DEFUDDLE_MD}${url}" 2>&1); then
+        "${DEFUDDLE_MD}/${url}" 2>&1); then
         log_warn "defuddle.md 请求失败"
         return 1
     fi
@@ -194,7 +195,7 @@ fetch_scrapling() {
     fi
 
     # 使用 Python 脚本获取内容
-    local script_dir="$(cd "$(dirname "$0")" && pwd)"
+    local script_dir="$(dirname "$0")"
     local scrapling_script="${script_dir}/fetch_scrapling.py"
 
     if [[ -f "$scrapling_script" ]]; then
